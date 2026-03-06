@@ -1,0 +1,9 @@
+- name: Test Kafka connectivity
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Test TCP connection to Kafka
+      wait_for:
+        host: 172.16.0.174
+        port: 9093
+        timeout: 5
