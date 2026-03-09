@@ -10,7 +10,7 @@
         from datetime import datetime
 
         producer = KafkaProducer(
-          bootstrap_servers='<KAFKA_HOST>:<KAFKA_PORT>',
+          bootstrap_servers='172.16.0.174:9093',
           key_serializer=lambda v: json.dumps(v).encode('utf-8'),
           value_serializer=lambda v: json.dumps(v).encode('utf-8')
         )
@@ -28,7 +28,7 @@
           'userEmail': '{{ user_email }}'
         }
 
-        producer.send('<TOPIC_SUCCESS>', key=key, value=payload)
+        producer.send('provider-operation-outcomes', key=key, value=payload)
         producer.flush()
         producer.close()
         print('OK')
