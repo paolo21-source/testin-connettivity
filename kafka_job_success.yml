@@ -7,17 +7,28 @@
         python3 -c "
         from kafka import KafkaProducer
         import json
+        from datetime import datetime
 
         producer = KafkaProducer(
-          bootstrap_servers='172.16.0.174:9093',
+          bootstrap_servers='<KAFKA_HOST>:<KAFKA_PORT>',
+          key_serializer=lambda v: json.dumps(v).encode('utf-8'),
           value_serializer=lambda v: json.dumps(v).encode('utf-8')
         )
 
-        producer.send('topic-success', {
-          'status': 'success',
-          'job': '{{ awx_job_id }}',
-          'template': '{{ awx_job_template_name }}'
-        })
+        key = {
+          'providerId': '{{ provider_secret.providerId }}',
+          'outcomeType': 'PROVIDER_OPERATION_COMPLETED',
+          'timestamp': datetime.utcnow().strftime('<TIMESTAMP_FORMAT>')
+        }
+
+        payload = {
+          'requestType': '{{ request_type }}',
+          'requestId': '{{ request_id }}',
+          'externalId': '{{ external_id }}',
+          'userEmail': '{{ user_email }}'
+        }
+
+        producer.send('<TOPIC_SUCCESS>', key=key, value=payload)
         producer.flush()
         producer.close()
         print('OK')

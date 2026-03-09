@@ -1,23 +1,35 @@
-- name: Notify Kafka - Job Failed
+- name: Notify Kafka - Job Failure
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Send failed message to Kafka
+    - name: Send failure message to Kafka
       shell: |
         python3 -c "
         from kafka import KafkaProducer
         import json
+        from datetime import datetime
 
         producer = KafkaProducer(
-          bootstrap_servers='172.16.0.174:9093',
+          bootstrap_servers='<KAFKA_HOST>:<KAFKA_PORT>',
+          key_serializer=lambda v: json.dumps(v).encode('utf-8'),
           value_serializer=lambda v: json.dumps(v).encode('utf-8')
         )
 
-        producer.send('topic-failed', {
-          'status': 'failed',
-          'job': '{{ awx_job_id }}',
-          'template': '{{ awx_job_template_name }}'
-        })
+        key = {
+          'providerId': '{{ provider_secret.providerId }}',
+          'outcomeType': 'PROVIDER_OPERATION_FAILED',
+          'timestamp': datetime.utcnow().strftime('<TIMESTAMP_FORMAT>')
+        }
+
+        payload = {
+          'requestType': 'PURCHASE',
+          'requestId': '{{ request_id }}',
+          'externalId': '{{ external_id }}',
+          'error': 'UNEXPECTED_ERROR',
+          'errorMessage': '{{ awx_job_explanation }}'
+        }
+
+        producer.send('<TOPIC_FAILURE>', key=key, value=payload)
         producer.flush()
         producer.close()
         print('OK')
