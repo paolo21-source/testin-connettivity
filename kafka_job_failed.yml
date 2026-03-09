@@ -25,7 +25,7 @@
           'requestId': '{{ request_id }}',
           'externalId': '{{ external_id }}',
           'error': 'UNEXPECTED_ERROR',
-          'errorMessage': '{{ awx_job_explanation }}'
+          'errorDetail': '{{ awx_job_explanation }}'
         }
 
         producer.send('provider-operation-outcomes', key=key, value=payload)
