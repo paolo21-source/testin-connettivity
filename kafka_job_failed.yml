@@ -22,7 +22,6 @@
         }
 
         payload = {
-          'requestType': 'PURCHASE',
           'requestId': '{{ request_id }}',
           'externalId': '{{ external_id }}',
           'error': 'UNEXPECTED_ERROR',
