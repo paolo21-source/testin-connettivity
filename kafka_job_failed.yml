@@ -10,11 +10,16 @@
         from datetime import datetime
 
         producer = KafkaProducer(
-          bootstrap_servers='172.16.0.174:9093',
+          bootstrap_servers='<KAFKA_HOST>:<KAFKA_PORT>',
+          security_protocol='SASL_SSL',
+          sasl_mechanism='PLAIN',
+          sasl_plain_username='<username>',
+          sasl_plain_password='<password>',
+          ssl_check_hostname=False,
+          ssl_cafile='/path/to/ca.pem',
           key_serializer=lambda v: json.dumps(v).encode('utf-8'),
           value_serializer=lambda v: json.dumps(v).encode('utf-8')
         )
-
         key = {
           'providerId': '{{ provider_secret.providerId }}',
           'outcomeType': 'PROVIDER_OPERATION_FAILED',
