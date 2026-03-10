@@ -22,6 +22,7 @@
         }
 
         payload = {
+          'requestType': '{{ request_type }}',
           'requestId': '{{ request_id }}',
           'externalId': '{{ external_id }}',
           'error': 'UNEXPECTED_ERROR',

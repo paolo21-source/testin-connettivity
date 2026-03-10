@@ -25,6 +25,8 @@
           'requestType': '{{ request_type }}',
           'requestId': '{{ request_id }}',
           'externalId': '{{ external_id }}',
+          'userEmail': '{{ user_email }}',
+          'cloudBlueTemplateId': '{{ activation_template_id }}'
         }
 
         producer.send('provider-operation-outcomes', key=key, value=payload)
