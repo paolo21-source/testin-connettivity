@@ -6,8 +6,12 @@
       shell: |
         python3 -c "
         from kafka import KafkaProducer
-        import json
+        import json, ssl
         from datetime import datetime
+
+        ssl_context = ssl.create_default_context()
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
 
         producer = KafkaProducer(
           bootstrap_servers='{{ kafka_bootstrap_servers }}',
@@ -15,8 +19,7 @@
           sasl_mechanism='PLAIN',
           sasl_plain_username='{{ kafka_username }}',
           sasl_plain_password='{{ kafka_password }}',
-          ssl_cafile='{{ kafka_ssl_cafile }}',
-          ssl_check_hostname=False,
+          ssl_context=ssl_context,
           key_serializer=lambda v: json.dumps(v).encode('utf-8'),
           value_serializer=lambda v: json.dumps(v).encode('utf-8')
         )
@@ -32,7 +35,7 @@
           'requestId': '{{ request_id }}',
           'externalId': '{{ external_id }}',
           'userEmail': '{{ user_email }}',
-          'cloudBlueTemplateId': '{{ activation_template_id }}'
+          'cloudBlueTemplateId': '{{ cloudblue_template_id }}'
         }
 
         producer.send('{{ kafka_topic }}', key=key, value=payload)
