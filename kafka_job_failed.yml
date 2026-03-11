@@ -10,13 +10,13 @@
         from datetime import datetime
 
         producer = KafkaProducer(
-          bootstrap_servers='<KAFKA_HOST>:<KAFKA_PORT>',
+          bootstrap_servers='{{ kafka_bootstrap_servers }}',
           security_protocol='SASL_SSL',
           sasl_mechanism='PLAIN',
-          sasl_plain_username='<username>',
-          sasl_plain_password='<password>',
+          sasl_plain_username='{{ kafka_username }}',
+          sasl_plain_password='{{ kafka_password }}',
+          ssl_cafile='{{ kafka_ssl_cafile }}',
           ssl_check_hostname=False,
-          ssl_cafile='/path/to/ca.pem',
           key_serializer=lambda v: json.dumps(v).encode('utf-8'),
           value_serializer=lambda v: json.dumps(v).encode('utf-8')
         )
