@@ -34,7 +34,7 @@
           'errorDetail': '{{ awx_job_explanation }}'
         }
 
-        producer.send('provider-operation-outcomes', key=key, value=payload)
+        producer.send('{{ kafka_topic }}', key=key, value=payload)
         producer.flush()
         producer.close()
         print('OK')
