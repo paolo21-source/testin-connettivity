@@ -8,6 +8,12 @@
         state: present
         extra_args: --break-system-packages
 
+    - name: Write Kafka CA certificate
+      copy:
+        content: "{{ kafka_ssl_cafile }}"
+        dest: /tmp/kafka_ca.pem
+        mode: '0600'
+
     - name: Send success message to Kafka
       shell: |
         python3 -c "
@@ -15,10 +21,10 @@
         import json, ssl
         from datetime import datetime
 
-        ssl_context = ssl.create_default_context()
+        ssl_context = ssl.create_default_context(cafile='/tmp/kafka_ca.pem')
         ssl_context.check_hostname = False
         ssl_context.verify_mode = ssl.CERT_NONE
-        
+
         producer = KafkaProducer(
           bootstrap_servers='{{ kafka_bootstrap_servers }}',
           security_protocol='SASL_SSL',
