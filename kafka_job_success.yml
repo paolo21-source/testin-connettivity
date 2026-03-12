@@ -14,71 +14,67 @@
         dest: /tmp/kafka_ca.pem
         mode: '0600'
 
-    - name: Create Kafka Python script
-      copy:
-        dest: /tmp/send_kafka.py
-        mode: '0755'
-        content: |
-          from confluent_kafka import Producer
-          import json, sys
-          from datetime import datetime
+    - name: Send success message to Kafka
+      shell: |
+        python3 -c "
+        from confluent_kafka import Producer
+        import json, sys
+        from datetime import datetime
 
-          def delivery_report(err, msg):
-              if err is not None:
-                  print(f"ERRORE CONSEGNA: {err}")
-                  sys.exit(1)
-              else:
-                  print(f"Messaggio inviato con successo al topic {msg.topic()}")
+        def delivery_report(err, msg):
+            if err is not None:
+                print('ERRORE CONSEGNA: {}'.format(err))
+                sys.exit(1)
+            else:
+                print('Messaggio inviato correttamente')
 
-          conf = {
-              'bootstrap.servers': '{{ kafka_bootstrap_servers }}',
-              'security.protocol': 'SASL_SSL',
-              'sasl.mechanism': '{{ kafka_sasl_mechanism }}',
-              'sasl.username': '{{ kafka_username }}',
-              'sasl.password': '{{ kafka_password }}',
-              'ssl.ca.location': '/tmp/kafka_ca.pem',
-              'ssl.endpoint.identification.algorithm': 'none', # Fondamentale per self-signed
-              'socket.timeout.ms': 10000,
-              'message.timeout.ms': 15000
-          }
+        conf = {
+            'bootstrap.servers': '{{ kafka_bootstrap_servers }}',
+            'security.protocol': 'SASL_SSL',
+            'sasl.mechanism': '{{ kafka_sasl_mechanism }}',
+            'sasl.username': '{{ kafka_username }}',
+            'sasl.password': '{{ kafka_password }}',
+            'ssl.ca.location': '/tmp/kafka_ca.pem',
+            'ssl.endpoint.identification.algorithm': 'none',
+            'socket.timeout.ms': 10000,
+            'message.timeout.ms': 15000
+        }
 
-          try:
-              producer = Producer(conf)
-              key = {
-                  'providerId': '{{ provider_id }}',
-                  'outcomeType': 'PROVIDER_OPERATION_COMPLETED',
-                  'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
-              }
-              payload = {
-                  'requestId': '{{ request_id }}',
-                  'externalId': '{{ external_id }}',
-                  'userEmail': '{{ user_email }}',
-                  'cloudBlueTemplateId': '{{ cloudblue_template_id }}'
-              }
+        try:
+            producer = Producer(conf)
+            key = {
+                'providerId': '{{ provider_id }}',
+                'outcomeType': 'PROVIDER_OPERATION_COMPLETED',
+                'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+            }
+            payload = {
+                'requestId': '{{ request_id }}',
+                'externalId': '{{ external_id }}',
+                'userEmail': '{{ user_email }}',
+                'cloudBlueTemplateId': '{{ cloudblue_template_id }}'
+            }
 
-              print("Tentativo di produzione messaggio...")
-              producer.produce(
-                  '{{ kafka_topic }}', 
-                  key=json.dumps(key).encode('utf-8'), 
-                  value=json.dumps(payload).encode('utf-8'),
-                  callback=delivery_report
-              )
+            producer.produce(
+                '{{ kafka_topic }}', 
+                key=json.dumps(key).encode('utf-8'), 
+                value=json.dumps(payload).encode('utf-8'),
+                callback=delivery_report
+            )
 
-              # Attende l'invio effettivo
-              events_processed = producer.flush(10.0)
-              if events_processed == 0 and len(producer) > 0:
-                  print("ERRORE: Timeout raggiunto, messaggio non inviato.")
-                  sys.exit(1)
-                  
-              print("Script completato con successo.")
-          except Exception as e:
-              print(f"ECCEZIONE: {e}")
-              sys.exit(1)
+            # Flush con timeout per non bloccare Ansible
+            print('In attesa di conferma dal server...')
+            result = producer.flush(10.0)
+            if result > 0:
+                print('TIMEOUT: Il broker non ha risposto in tempo')
+                sys.exit(1)
+            
+            print('OK')
+        except Exception as e:
+            print('ECCEZIONE: {}'.format(e))
+            sys.exit(1)
+        "
+      register: kafka_shell_result
 
-    - name: Execute Kafka script
-      command: python3 /tmp/send_kafka.py
-      register: kafka_result
-
-    - name: Show Kafka Output
+    - name: Debug Risultato
       debug:
-        var: kafka_result.stdout_lines
+        var: kafka_shell_result.stdout_lines
