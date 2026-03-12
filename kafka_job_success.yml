@@ -2,12 +2,13 @@
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Install kafka-python
+
+    - name: Install confluent-kafka
       pip:
-        name: kafka-python
+        name: confluent-kafka
         state: present
         extra_args: --break-system-packages
-
+        
     - name: Write Kafka CA certificate
       copy:
         content: "{{ kafka_ssl_cafile }}"
