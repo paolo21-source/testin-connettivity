@@ -14,84 +14,71 @@
         dest: /tmp/kafka_ca.pem
         mode: '0600'
 
-    - name: Test connessione SSL con openssl
-      shell: |
-        openssl s_client -connect {{ kafka_bootstrap_servers }} -CAfile /tmp/kafka_ca.pem < /dev/null
-      register: openssl_debug
-      ignore_errors: yes
+    - name: Create Kafka Python script
+      copy:
+        dest: /tmp/send_kafka.py
+        mode: '0755'
+        content: |
+          from confluent_kafka import Producer
+          import json, sys
+          from datetime import datetime
 
-    - name: Send success message to Kafka
-      shell: |
-        python3 -c "
-        from confluent_kafka import Producer
-        import json, sys
-        from datetime import datetime
+          def delivery_report(err, msg):
+              if err is not None:
+                  print(f"ERRORE CONSEGNA: {err}")
+                  sys.exit(1)
+              else:
+                  print(f"Messaggio inviato con successo al topic {msg.topic()}")
 
-        def delivery_report(err, msg):
-            if err is not None:
-                print(f'ERRORE CONSEGNA: {err}')
-                sys.exit(1)
-            else:
-                print(f'Messaggio inviato a {msg.topic()}')
+          conf = {
+              'bootstrap.servers': '{{ kafka_bootstrap_servers }}',
+              'security.protocol': 'SASL_SSL',
+              'sasl.mechanism': '{{ kafka_sasl_mechanism }}',
+              'sasl.username': '{{ kafka_username }}',
+              'sasl.password': '{{ kafka_password }}',
+              'ssl.ca.location': '/tmp/kafka_ca.pem',
+              'ssl.endpoint.identification.algorithm': 'none', # Fondamentale per self-signed
+              'socket.timeout.ms': 10000,
+              'message.timeout.ms': 15000
+          }
 
-        conf = {
-            'bootstrap.servers': '{{ kafka_bootstrap_servers }}',
-            'security.protocol': 'SASL_SSL',
-            'sasl.mechanism': '{{ kafka_sasl_mechanism }}',
-            'sasl.username': '{{ kafka_username }}',
-            'sasl.password': '{{ kafka_password }}',
-            'ssl.ca.location': '/tmp/kafka_ca.pem',
-            # Forza l'accettazione del certificato se il CN non corrisponde all'hostname
-            'ssl.endpoint.identification.algorithm': 'none',
-            # Timeout critici per evitare il blocco del workflow AWX
-            'socket.timeout.ms': 10000,
-            'message.timeout.ms': 15000,
-            'reconnect.backoff.max.ms': 5000
-        }
+          try:
+              producer = Producer(conf)
+              key = {
+                  'providerId': '{{ provider_id }}',
+                  'outcomeType': 'PROVIDER_OPERATION_COMPLETED',
+                  'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+              }
+              payload = {
+                  'requestId': '{{ request_id }}',
+                  'externalId': '{{ external_id }}',
+                  'userEmail': '{{ user_email }}',
+                  'cloudBlueTemplateId': '{{ cloudblue_template_id }}'
+              }
 
-        try:
-            producer = Producer(conf)
-            
-            key = {
-                'providerId': '{{ provider_id }}',
-                'outcomeType': 'PROVIDER_OPERATION_COMPLETED',
-                'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
-            }
-            payload = {
-                'requestId': '{{ request_id }}',
-                'externalId': '{{ external_id }}',
-                'userEmail': '{{ user_email }}',
-                'cloudBlueTemplateId': '{{ cloudblue_template_id }}'
-            }
+              print("Tentativo di produzione messaggio...")
+              producer.produce(
+                  '{{ kafka_topic }}', 
+                  key=json.dumps(key).encode('utf-8'), 
+                  value=json.dumps(payload).encode('utf-8'),
+                  callback=delivery_report
+              )
 
-            print('Tentativo di invio...')
-            producer.produce(
-                '{{ kafka_topic }}', 
-                key=json.dumps(key).encode('utf-8'), 
-                value=json.dumps(payload).encode('utf-8'),
-                callback=delivery_report
-            )
+              # Attende l'invio effettivo
+              events_processed = producer.flush(10.0)
+              if events_processed == 0 and len(producer) > 0:
+                  print("ERRORE: Timeout raggiunto, messaggio non inviato.")
+                  sys.exit(1)
+                  
+              print("Script completato con successo.")
+          except Exception as e:
+              print(f"ECCEZIONE: {e}")
+              sys.exit(1)
 
-            # Il flush ora ha un timeout di 10 secondi. Se fallisce, lo script prosegue/esce.
-            result = producer.flush(10.0)
-            if result > 0:
-                print('Timeout: Messaggio non consegnato dopo 10s')
-                sys.exit(1)
-                
-            print('OK')
-        except Exception as e:
-            print(f'Eccezione durante l esecuzione: {e}')
-            sys.exit(1)
-        "
+    - name: Execute Kafka script
+      command: python3 /tmp/send_kafka.py
+      register: kafka_result
 
-        # Invio messaggio
-        producer.produce(
-            '{{ kafka_topic }}', 
-            key=json.dumps(key).encode('utf-8'), 
-            value=json.dumps(payload).encode('utf-8'),
-            callback=delivery_report
-        )
-
-        producer.flush()
-        print('OK')
-        "
+    - name: Show Kafka Output
+      debug:
+        var: kafka_result.stdout_lines
