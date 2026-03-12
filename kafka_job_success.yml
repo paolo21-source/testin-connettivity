@@ -10,7 +10,7 @@
         
     - name: Write Kafka CA certificate
       copy:
-        content: "{{ kafka_ssl_cafile }}"
+        content: "{{ kafka_ssl_cafile | trim }}\n"
         dest: /tmp/kafka_ca.pem
         mode: '0600'
 
