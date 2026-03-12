@@ -24,10 +24,16 @@
       shell: |
         python3 -c "
         from confluent_kafka import Producer
-        import json
+        import json, sys
         from datetime import datetime
 
-        # Configurazione specifica per confluent-kafka
+        def delivery_report(err, msg):
+            if err is not None:
+                print(f'ERRORE CONSEGNA: {err}')
+                sys.exit(1)
+            else:
+                print(f'Messaggio inviato a {msg.topic()}')
+
         conf = {
             'bootstrap.servers': '{{ kafka_bootstrap_servers }}',
             'security.protocol': 'SASL_SSL',
@@ -35,28 +41,48 @@
             'sasl.username': '{{ kafka_username }}',
             'sasl.password': '{{ kafka_password }}',
             'ssl.ca.location': '/tmp/kafka_ca.pem',
-            'ssl.endpoint.identification.algorithm': 'none'
+            # Forza l'accettazione del certificato se il CN non corrisponde all'hostname
+            'ssl.endpoint.identification.algorithm': 'none',
+            # Timeout critici per evitare il blocco del workflow AWX
+            'socket.timeout.ms': 10000,
+            'message.timeout.ms': 15000,
+            'reconnect.backoff.max.ms': 5000
         }
 
-        producer = Producer(conf)
+        try:
+            producer = Producer(conf)
+            
+            key = {
+                'providerId': '{{ provider_id }}',
+                'outcomeType': 'PROVIDER_OPERATION_COMPLETED',
+                'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+            }
+            payload = {
+                'requestId': '{{ request_id }}',
+                'externalId': '{{ external_id }}',
+                'userEmail': '{{ user_email }}',
+                'cloudBlueTemplateId': '{{ cloudblue_template_id }}'
+            }
 
-        def delivery_report(err, msg):
-            if err is not None:
-                print(f'Errore: {err}')
-                exit(1)
+            print('Tentativo di invio...')
+            producer.produce(
+                '{{ kafka_topic }}', 
+                key=json.dumps(key).encode('utf-8'), 
+                value=json.dumps(payload).encode('utf-8'),
+                callback=delivery_report
+            )
 
-        key = {
-            'providerId': '{{ provider_id }}',
-            'outcomeType': 'PROVIDER_OPERATION_COMPLETED',
-            'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
-        }
-
-        payload = {
-            'requestId': '{{ request_id }}',
-            'externalId': '{{ external_id }}',
-            'userEmail': '{{ user_email }}',
-            'cloudBlueTemplateId': '{{ cloudblue_template_id }}'
-        }
+            # Il flush ora ha un timeout di 10 secondi. Se fallisce, lo script prosegue/esce.
+            result = producer.flush(10.0)
+            if result > 0:
+                print('Timeout: Messaggio non consegnato dopo 10s')
+                sys.exit(1)
+                
+            print('OK')
+        except Exception as e:
+            print(f'Eccezione durante l esecuzione: {e}')
+            sys.exit(1)
+        "
 
         # Invio messaggio
         producer.produce(
