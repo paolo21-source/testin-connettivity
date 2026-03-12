@@ -1,18 +1,22 @@
-- name: Notify Kafka - Job Failure
+- name: Notify Kafka - Job Failed
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Send failure message to Kafka
+    - name: Write Kafka CA certificate
+      copy:
+        content: "{{ kafka_ssl_cafile }}"
+        dest: /tmp/kafka_ca.pem
+        mode: '0600'
+
+    - name: Send failed message to Kafka
       shell: |
         python3 -c "
         from kafka import KafkaProducer
         import json, ssl
         from datetime import datetime
 
-        ssl_context = ssl.create_default_context()
+        ssl_context = ssl.create_default_context(cafile='/tmp/kafka_ca.pem')
         ssl_context.check_hostname = False
-        ssl_context.verify_mode = ssl.CERT_NONE
-
 
         producer = KafkaProducer(
           bootstrap_servers='{{ kafka_bootstrap_servers }}',
@@ -24,17 +28,18 @@
           key_serializer=lambda v: json.dumps(v).encode('utf-8'),
           value_serializer=lambda v: json.dumps(v).encode('utf-8')
         )
+
         key = {
           'providerId': '{{ provider_id }}',
           'outcomeType': 'PROVIDER_OPERATION_FAILED',
-          'timestamp': datetime.utcnow().strftime('<TIMESTAMP_FORMAT>')
+          'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%S.%f')[:-3] + 'Z'
         }
 
         payload = {
           'requestId': '{{ request_id }}',
           'externalId': '{{ external_id }}',
-          'error': 'UNEXPECTED_ERROR',
-          'errorDetail': '{{ awx_job_explanation }}'
+          'userEmail': '{{ user_email }}',
+          'cloudBlueTemplateId': '{{ cloudblue_template_id }}'
         }
 
         producer.send('{{ kafka_topic }}', key=key, value=payload)
@@ -44,3 +49,6 @@
         "
 
 #Rimosso per il momento request type 
+#modificato provider_id perchè non deve prenderlo più dal secret ma dal job 
+#capire perchè request type non funziona
+#aggiungere il time stamp giusto 
