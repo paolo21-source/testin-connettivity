@@ -8,6 +8,12 @@
         dest: /tmp/kafka_ca.pem
         mode: '0600'
 
+    - name: Install kafka-python
+      pip:
+        name: kafka-python
+        state: present
+      become: true
+
     - name: Send success message to Kafka
       shell: |
         python3 -c "
@@ -47,9 +53,7 @@
         producer.close()
         print('OK')
         "
-    - name: Debug kafka error
-      debug:
-        msg: "STDOUT: {{ kafka_result.stdout }} | STDERR: {{ kafka_result.stderr }}"
+
 #Rimosso per il momento request type 
 #modificato provider_id perchè non deve prenderlo più dal secret ma dal job 
 #capire perchè request type non funziona
