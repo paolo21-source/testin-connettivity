@@ -8,12 +8,6 @@
         state: present
         extra_args: --break-system-packages
 
-    - name: Write Kafka CA certificate
-      copy:
-        content: "{{ kafka_ssl_cafile }}"
-        dest: /tmp/kafka_ca.pem
-        mode: '0600'
-
     - name: Send failed message to Kafka
       shell: |
         python3 -c "
@@ -21,8 +15,9 @@
         import json, ssl
         from datetime import datetime
 
-        ssl_context = ssl.create_default_context(cafile='/tmp/kafka_ca.pem')
+        ssl_context = ssl.create_default_context()
         ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
 
         producer = KafkaProducer(
           bootstrap_servers='{{ kafka_bootstrap_servers }}',
@@ -44,8 +39,8 @@
         payload = {
           'requestId': '{{ request_id }}',
           'externalId': '{{ external_id }}',
-          'userEmail': '{{ user_email }}',
-          'cloudBlueTemplateId': '{{ cloudblue_template_id }}'
+          'error': 'UNEXPECTED_ERROR',
+          'errorDetail': '{{ awx_job_explanation }}'
         }
 
         producer.send('{{ kafka_topic }}', key=key, value=payload)
@@ -53,13 +48,3 @@
         producer.close()
         print('OK')
         "
-      register: kafka_result
-      ignore_errors: true
-      
-    - name: Debug kafka error
-      debug:
-        msg: "{{ kafka_result.stderr }}"
-#Rimosso per il momento request type 
-#modificato provider_id perchè non deve prenderlo più dal secret ma dal job 
-#capire perchè request type non funziona
-#aggiungere il time stamp giusto 
