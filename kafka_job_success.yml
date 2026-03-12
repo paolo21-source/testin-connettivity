@@ -2,17 +2,17 @@
   hosts: localhost
   gather_facts: false
   tasks:
+    - name: Install kafka-python
+      pip:
+        name: kafka-python
+        state: present
+        extra_args: --break-system-packages
+        
     - name: Write Kafka CA certificate
       copy:
         content: "{{ kafka_ssl_cafile }}"
         dest: /tmp/kafka_ca.pem
         mode: '0600'
-
-    - name: Install kafka-python
-      pip:
-        name: kafka-python
-        state: present
-      become: true
 
     - name: Send success message to Kafka
       shell: |
