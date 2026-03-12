@@ -7,7 +7,7 @@
         name: kafka-python
         state: present
         extra_args: --break-system-packages
-          
+
     - name: Write Kafka CA certificate
       copy:
         content: "{{ kafka_ssl_cafile }}"
@@ -53,6 +53,12 @@
         producer.close()
         print('OK')
         "
+      register: kafka_result
+      ignore_errors: true
+      
+    - name: Debug kafka error
+      debug:
+        msg: "{{ kafka_result.stderr }}"
 #Rimosso per il momento request type 
 #modificato provider_id perchè non deve prenderlo più dal secret ma dal job 
 #capire perchè request type non funziona
