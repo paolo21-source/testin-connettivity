@@ -2,7 +2,6 @@
   hosts: localhost
   gather_facts: false
   tasks:
-
     - name: Install confluent-kafka
       pip:
         name: confluent-kafka
@@ -17,54 +16,57 @@
 
     - name: Test connessione SSL con openssl
       shell: |
-        openssl s_client -connect manageiq-kvm.corp.sourcesense.com:9093 -CAfile /tmp/kafka_ca.pem < /dev/null
+        openssl s_client -connect {{ kafka_bootstrap_servers }} -CAfile /tmp/kafka_ca.pem < /dev/null
       register: openssl_debug
-
-    - name: Debug OpenSSL connection
-      debug:
-        var: openssl_debug.stdout_lines
+      ignore_errors: yes
 
     - name: Send success message to Kafka
       shell: |
         python3 -c "
-        from kafka import KafkaProducer
-        import json, ssl
+        from confluent_kafka import Producer
+        import json
         from datetime import datetime
 
-        ssl_context = ssl.create_default_context(cafile='/tmp/kafka_ca.pem')
-        ssl_context.check_hostname = False
+        # Configurazione specifica per confluent-kafka
+        conf = {
+            'bootstrap.servers': '{{ kafka_bootstrap_servers }}',
+            'security.protocol': 'SASL_SSL',
+            'sasl.mechanism': '{{ kafka_sasl_mechanism }}',
+            'sasl.username': '{{ kafka_username }}',
+            'sasl.password': '{{ kafka_password }}',
+            'ssl.ca.location': '/tmp/kafka_ca.pem',
+            # Se hai ancora problemi di trust con i self-signed nonostante la CA:
+            # 'ssl.endpoint.identification.algorithm': 'none' 
+        }
 
-        producer = KafkaProducer(
-          bootstrap_servers='{{ kafka_bootstrap_servers }}',
-          security_protocol='SASL_SSL',
-          sasl_mechanism='{{ kafka_sasl_mechanism }}',
-          sasl_plain_username='{{ kafka_username }}',
-          sasl_plain_password='{{ kafka_password }}',
-          ssl_context=ssl_context,
-          key_serializer=lambda v: json.dumps(v).encode('utf-8'),
-          value_serializer=lambda v: json.dumps(v).encode('utf-8')
-        )
+        producer = Producer(conf)
+
+        def delivery_report(err, msg):
+            if err is not None:
+                print(f'Errore: {err}')
+                exit(1)
 
         key = {
-          'providerId': '{{ provider_id }}',
-          'outcomeType': 'PROVIDER_OPERATION_COMPLETED',
-          'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+            'providerId': '{{ provider_id }}',
+            'outcomeType': 'PROVIDER_OPERATION_COMPLETED',
+            'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
         }
 
         payload = {
-          'requestId': '{{ request_id }}',
-          'externalId': '{{ external_id }}',
-          'userEmail': '{{ user_email }}',
-          'cloudBlueTemplateId': '{{ cloudblue_template_id }}'
+            'requestId': '{{ request_id }}',
+            'externalId': '{{ external_id }}',
+            'userEmail': '{{ user_email }}',
+            'cloudBlueTemplateId': '{{ cloudblue_template_id }}'
         }
 
-        producer.send('{{ kafka_topic }}', key=key, value=payload)
+        # Invio messaggio
+        producer.produce(
+            '{{ kafka_topic }}', 
+            key=json.dumps(key).encode('utf-8'), 
+            value=json.dumps(payload).encode('utf-8'),
+            callback=delivery_report
+        )
+
         producer.flush()
-        producer.close()
         print('OK')
         "
-
-
-#Rimosso per il momento request type 
-#modificato provider_id perchè non deve prenderlo più dal secret ma dal job 
-#aggiungere il time stamp giusto 
