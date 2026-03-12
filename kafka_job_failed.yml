@@ -25,7 +25,7 @@
           value_serializer=lambda v: json.dumps(v).encode('utf-8')
         )
         key = {
-          'providerId': '{{ provider_secret.providerId }}',
+          'providerId': '{{ provider_id }}',
           'outcomeType': 'PROVIDER_OPERATION_FAILED',
           'timestamp': datetime.utcnow().strftime('<TIMESTAMP_FORMAT>')
         }
