@@ -31,7 +31,6 @@
         }
 
         payload = {
-          'requestType': '{{ request_type }}',
           'requestId': '{{ request_id }}',
           'externalId': '{{ external_id }}',
           'error': 'UNEXPECTED_ERROR',
@@ -43,3 +42,5 @@
         producer.close()
         print('OK')
         "
+
+#Rimosso per il momento request type 
