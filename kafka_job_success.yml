@@ -14,6 +14,15 @@
         dest: /tmp/kafka_ca.pem
         mode: '0600'
 
+    - name: Test connessione SSL con openssl
+      shell: |
+        openssl s_client -connect manageiq-kvm.corp.sourcesense.com:9093 -CAfile /tmp/kafka_ca.pem < /dev/null
+      register: openssl_debug
+
+    - name: Debug OpenSSL connection
+      debug:
+        var: openssl_debug.stdout_lines
+
     - name: Send success message to Kafka
       shell: |
         python3 -c "
