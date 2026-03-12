@@ -35,8 +35,7 @@
             'sasl.username': '{{ kafka_username }}',
             'sasl.password': '{{ kafka_password }}',
             'ssl.ca.location': '/tmp/kafka_ca.pem',
-            # Se hai ancora problemi di trust con i self-signed nonostante la CA:
-            # 'ssl.endpoint.identification.algorithm': 'none' 
+            'ssl.endpoint.identification.algorithm': 'none'
         }
 
         producer = Producer(conf)
