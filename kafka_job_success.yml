@@ -66,5 +66,4 @@
 
 #Rimosso per il momento request type 
 #modificato provider_id perchè non deve prenderlo più dal secret ma dal job 
-#capire perchè request type non funziona
 #aggiungere il time stamp giusto 

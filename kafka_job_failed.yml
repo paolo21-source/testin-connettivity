@@ -53,3 +53,7 @@
         producer.close()
         print('OK')
         "
+
+#Rimosso per il momento request type 
+#modificato provider_id perchè non deve prenderlo più dal secret ma dal job 
+#aggiungere il time stamp giusto 
