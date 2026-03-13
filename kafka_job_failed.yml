@@ -37,6 +37,7 @@
 
         key = {
           'providerId': '{{ provider_id }}',
+          'providerName: '{{ provider_name }}',
           'outcomeType': 'PROVIDER_OPERATION_FAILED',
           'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
         }
@@ -54,6 +55,4 @@
         print('OK')
         "
 
-#Rimosso per il momento request type 
-#modificato provider_id perchè non deve prenderlo più dal secret ma dal job 
-#aggiungere il time stamp giusto 
+#Rimosso per il momento request type, aggiungerlo e prenderlo dal job template se necessario in futuro

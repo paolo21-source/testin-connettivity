@@ -44,6 +44,7 @@
             producer = Producer(conf)
             key = {
                 'providerId': '{{ provider_id }}',
+                'providerName: '{{ provider_name }}',
                 'outcomeType': 'PROVIDER_OPERATION_COMPLETED',
                 'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
             }
@@ -78,3 +79,5 @@
     - name: Debug Risultato
       debug:
         var: kafka_shell_result.stdout_lines
+
+#Request type rimosso per il momento, aggiungerlo e prenderlo dal job template se necessario in futuro
