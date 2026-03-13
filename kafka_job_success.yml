@@ -11,6 +11,7 @@
           {{
             {
               "requestId": request_id,
+              "requestType": request_type,
               "externalId": external_id,
               "userEmail": user_email,
               "cloudBlueTemplateId": cloudblue_template_id,
