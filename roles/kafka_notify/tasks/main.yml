@@ -39,13 +39,12 @@
     try:
         producer = Producer(conf)
 
-        key = {
+        key = json.dumps({
             'providerId': '{{ provider_id }}',
             'providerName': '{{ provider_name }}',
-            'requestId': '{{ request_id }}',
             'outcomeType': '{{ kafka_outcome_type }}',
             'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
-        }
+        }).encode('utf-8')
 
         payload = json.loads('{{ kafka_payload }}')
 
@@ -56,7 +55,7 @@
 
         producer.produce(
             '{{ kafka_topic }}',
-            key=json.dumps(key).encode('utf-8'),
+            key=key,
             value=json.dumps(payload).encode('utf-8'),
             headers=headers,
             callback=delivery_report
