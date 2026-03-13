@@ -14,6 +14,6 @@
               "requestType": request_type,
               "externalId": external_id,
               "error": error,
-              "errorDetail": awx_job_explanation
+              "errorDetail": errorDetail
             } | to_json
           }}
