@@ -45,12 +45,12 @@
             key = {
                 'providerId': '{{ provider_id }}',
                 'providerName': '{{ provider_name }}',
-                'jobTemplateName': '{{ awx_job_template_name }}',
                 'outcomeType': 'PROVIDER_OPERATION_COMPLETED',
                 'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
             }
             payload = {
                 'requestId': '{{ request_id }}',
+                'jobTemplateName': '{{ awx_job_template_name }}',
                 'externalId': '{{ external_id }}',
                 'userEmail': '{{ user_email }}',
                 'cloudBlueTemplateId': '{{ cloudblue_template_id }}'

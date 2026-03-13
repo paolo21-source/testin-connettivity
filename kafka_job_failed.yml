@@ -44,6 +44,7 @@
 
         payload = {
           'requestId': '{{ request_id }}',
+          'jobTemplateName': '{{ awx_job_template_name }}',
           'externalId': '{{ external_id }}',
           'error': 'UNEXPECTED_ERROR',
           'errorDetail': '{{ awx_job_explanation }}'
