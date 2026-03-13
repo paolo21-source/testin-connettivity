@@ -71,6 +71,8 @@
         print('ECCEZIONE: {}'.format(e))
         sys.exit(1)
     "
+  environment:
+    KAFKA_PAYLOAD: "{{ kafka_payload }}"
   register: kafka_shell_result
 
 - name: Debug Risultato
