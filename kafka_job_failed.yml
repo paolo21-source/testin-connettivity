@@ -13,7 +13,7 @@
               "requestId": request_id,
               "requestType": request_type,
               "externalId": external_id,
-              "error": "UNEXPECTED_ERROR",
+              "error": error,
               "errorDetail": awx_job_explanation
             } | to_json
           }}
