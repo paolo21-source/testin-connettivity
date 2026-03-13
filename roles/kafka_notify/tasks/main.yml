@@ -42,8 +42,6 @@
         key = {
             'providerId': '{{ provider_id }}',
             'providerName': '{{ provider_name }}',
-            'requestType': '{{ request_type }}',
-            'requestId': '{{ request_id }}',
             'outcomeType': '{{ kafka_outcome_type }}',
             'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
         }
