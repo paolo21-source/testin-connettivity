@@ -2,83 +2,18 @@
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Install confluent-kafka
-      pip:
-        name: confluent-kafka
-        state: present
-        extra_args: --break-system-packages
-        
-    - name: Write Kafka CA certificate
-      copy:
-        content: "{{ kafka_ssl_cafile | trim }}\n"
-        dest: /tmp/kafka_ca.pem
-        mode: '0600'
-
-    - name: Send success message to Kafka
-      shell: |
-        python3 -c "
-        from confluent_kafka import Producer
-        import json, sys
-        from datetime import datetime
-
-        def delivery_report(err, msg):
-            if err is not None:
-                print('ERRORE CONSEGNA: {}'.format(err))
-                sys.exit(1)
-            else:
-                print('Messaggio inviato correttamente')
-
-        conf = {
-            'bootstrap.servers': '{{ kafka_bootstrap_servers }}',
-            'security.protocol': 'SASL_SSL',
-            'sasl.mechanism': '{{ kafka_sasl_mechanism }}',
-            'sasl.username': '{{ kafka_username }}',
-            'sasl.password': '{{ kafka_password }}',
-            'ssl.ca.location': '/tmp/kafka_ca.pem',
-            'ssl.endpoint.identification.algorithm': 'none',
-            'socket.timeout.ms': 10000,
-            'message.timeout.ms': 15000
-        }
-
-        try:
-            producer = Producer(conf)
-            key = {
-                'providerId': '{{ provider_id }}',
-                'providerName': '{{ provider_name }}',
-                'outcomeType': 'PROVIDER_OPERATION_COMPLETED',
-                'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
-            }
-            payload = {
-                'requestId': '{{ request_id }}',
-                'jobTemplateName': '{{ awx_job_template_name }}',
-                'externalId': '{{ external_id }}',
-                'userEmail': '{{ user_email }}',
-                'cloudBlueTemplateId': '{{ cloudblue_template_id }}'
-            }
-
-            producer.produce(
-                '{{ kafka_topic }}', 
-                key=json.dumps(key).encode('utf-8'), 
-                value=json.dumps(payload).encode('utf-8'),
-                callback=delivery_report
-            )
-
-            # Flush con timeout per non bloccare Ansible
-            print('In attesa di conferma dal server...')
-            result = producer.flush(10.0)
-            if result > 0:
-                print('TIMEOUT: Il broker non ha risposto in tempo')
-                sys.exit(1)
-            
-            print('OK')
-        except Exception as e:
-            print('ECCEZIONE: {}'.format(e))
-            sys.exit(1)
-        "
-      register: kafka_shell_result
-
-    - name: Debug Risultato
-      debug:
-        var: kafka_shell_result.stdout_lines
-
-#Request type rimosso per il momento, aggiungerlo e prenderlo dal job template se necessario in futuro
+    - name: Send Kafka success notification
+      include_role:
+        name: kafka_notify
+      vars:
+        kafka_outcome_type: "PROVIDER_OPERATION_COMPLETED"
+        kafka_payload: >-
+          {{
+            {
+              "requestId": request_id,
+              "externalId": external_id,
+              "userEmail": user_email,
+              "cloudBlueTemplateId": cloudblue_template_id,
+              "requestType": request_type
+            } | to_json
+          }}

@@ -1,0 +1,78 @@
+- name: Install confluent-kafka
+  pip:
+    name: confluent-kafka
+    state: present
+    extra_args: --break-system-packages
+
+- name: Write Kafka CA certificate
+  copy:
+    content: "{{ kafka_ssl_cafile | trim }}\n"
+    dest: /tmp/kafka_ca.pem
+    mode: '0600'
+
+- name: Send message to Kafka
+  shell: |
+    python3 -c "
+    from confluent_kafka import Producer
+    import json, sys
+    from datetime import datetime
+
+    def delivery_report(err, msg):
+        if err is not None:
+            print('ERRORE CONSEGNA: {}'.format(err))
+            sys.exit(1)
+        else:
+            print('Messaggio inviato correttamente')
+
+    conf = {
+        'bootstrap.servers': '{{ kafka_bootstrap_servers }}',
+        'security.protocol': 'SASL_SSL',
+        'sasl.mechanism': '{{ kafka_sasl_mechanism }}',
+        'sasl.username': '{{ kafka_username }}',
+        'sasl.password': '{{ kafka_password }}',
+        'ssl.ca.location': '/tmp/kafka_ca.pem',
+        'ssl.endpoint.identification.algorithm': 'none',
+        'socket.timeout.ms': 10000,
+        'message.timeout.ms': 15000
+    }
+
+    try:
+        producer = Producer(conf)
+
+        key = {
+            'providerId': '{{ provider_id }}',
+            'providerName': '{{ provider_name }}',
+            'requestId': '{{ request_id }}',
+            'outcomeType': '{{ kafka_outcome_type }}',
+            'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
+        }
+
+        payload = json.loads('{{ kafka_payload }}')
+
+        headers = [
+            ('awx_job_id', '{{ awx_job_id }}'.encode('utf-8')),
+            ('awx_job_template_name', '{{ awx_job_template_name }}'.encode('utf-8'))
+        ]
+
+        producer.produce(
+            '{{ kafka_topic }}',
+            key=json.dumps(key).encode('utf-8'),
+            value=json.dumps(payload).encode('utf-8'),
+            headers=headers,
+            callback=delivery_report
+        )
+
+        result = producer.flush(10.0)
+        if result > 0:
+            print('TIMEOUT: Il broker non ha risposto in tempo')
+            sys.exit(1)
+        print('OK')
+    except Exception as e:
+        print('ECCEZIONE: {}'.format(e))
+        sys.exit(1)
+    "
+  register: kafka_shell_result
+
+- name: Debug Risultato
+  debug:
+    var: kafka_shell_result.stdout_lines
