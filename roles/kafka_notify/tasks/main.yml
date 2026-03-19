@@ -46,7 +46,8 @@
             'timestamp': datetime.utcnow().strftime('%Y-%m-%dT%H:%M:%SZ')
         }
 
-        payload = json.loads(os.environ['KAFKA_PAYLOAD'])
+        payload = json.loads(os.environ['KAFKA_PAYLOAD']) 
+        # passargli payload come var non come envionment 
 
         headers = [
             ('awx_job_id', '{{ awx_job_id }}'.encode('utf-8')),
@@ -77,3 +78,5 @@
 - name: Debug Risultato
   debug:
     var: kafka_shell_result.stdout_lines
+
+#passare tutta la chiave ( key e header )
