@@ -13,8 +13,8 @@
               "requestId": request_id,
               "requestType": request_type,
               "externalId": external_id,
+              "userEmail": user_email,
               "error": error,
               "errorDetail": errorDetail
-              "userEmail": user_email,
             } | to_json
           }}
