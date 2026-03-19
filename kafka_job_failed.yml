@@ -15,5 +15,6 @@
               "externalId": external_id,
               "error": error,
               "errorDetail": errorDetail
+              "userEmail": user_email,
             } | to_json
           }}
